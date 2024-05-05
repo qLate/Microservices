@@ -15,6 +15,8 @@ namespace FacadeService.Controllers
         [HttpGet]
         public string Get()
         {
+            logger.LogInformation("Received GET request");
+
             var loggingResponse = _client.GetAsync(LoggingServiceUrl).Result;
             var messagesResponse = _client.GetAsync(MessagesServiceUrl).Result;
             return loggingResponse.Content.ReadAsStringAsync().Result + ": " + messagesResponse.Content.ReadAsStringAsync().Result;
@@ -24,6 +26,8 @@ namespace FacadeService.Controllers
         [HttpPost]
         public HttpResponseMessage Post([FromBody] string value)
         {
+            logger.LogInformation("Received POST request, value: {0}", value);
+
             return _client.PostAsync(LoggingServiceUrl, new StringContent(value)).Result;
         }
     }

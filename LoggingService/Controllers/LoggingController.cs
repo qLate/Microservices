@@ -13,6 +13,8 @@ namespace LoggingService.Controllers
         [HttpGet]
         public IEnumerable<string> Get()
         {
+            logger.LogInformation("Received GET request");
+
             return messages.Values;
         }
 
@@ -22,6 +24,9 @@ namespace LoggingService.Controllers
         {
             using var reader = new StreamReader(Request.Body);
             var plainText = await reader.ReadToEndAsync();
+
+            logger.LogInformation("Received POST request, value: {0}", plainText);
+
             messages.TryAdd(DateTime.Now.ToString(), plainText);
             return Ok();
         }
