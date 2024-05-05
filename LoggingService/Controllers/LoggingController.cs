@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 
 namespace LoggingService.Controllers
 {
@@ -7,15 +6,13 @@ namespace LoggingService.Controllers
     [ApiController]
     public class LoggingController(ILogger<LoggingController> logger) : ControllerBase
     {
-        static ConcurrentDictionary<string, string> messages = new();
-
         // GET: api/<LoggingController>
         [HttpGet]
-        public IEnumerable<string> Get()
+        public async Task<IReadOnlyCollection<string>> Get()
         {
             logger.LogInformation("Received GET request");
 
-            return messages.Values;
+            return await HazelcastHandler.messages!.GetValuesAsync()!;
         }
 
         // POST api/<LoggingController>
@@ -27,7 +24,7 @@ namespace LoggingService.Controllers
 
             logger.LogInformation("Received POST request, value: {0}", plainText);
 
-            messages.TryAdd(DateTime.Now.ToString(), plainText);
+            await HazelcastHandler.messages!.SetAsync(Guid.NewGuid().ToString(), plainText);
             return Ok();
         }
     }

@@ -6,10 +6,17 @@ namespace FacadeService.Controllers
     [ApiController]
     public class FacadeController(ILogger<FacadeController> logger) : ControllerBase
     {
-        private HttpClient _client = new();
-
-        private const string LoggingServiceUrl = "https://localhost:7001/api/log";
+        private static List<string> loggingServiceUrls = new()
+        {
+            "https://localhost:7003/api/log",
+            "https://localhost:7004/api/log",
+            "https://localhost:7005/api/log"
+        };
         private const string MessagesServiceUrl = "https://localhost:7002/api/messages";
+
+        private static string GetLoggingServiceUrl() => loggingServiceUrls[Random.Shared.Next(0, loggingServiceUrls.Count)];
+
+        private HttpClient _client = new();
 
         // GET api/<FacadeController>
         [HttpGet]
@@ -17,7 +24,10 @@ namespace FacadeService.Controllers
         {
             logger.LogInformation("Received GET request");
 
-            var loggingResponse = _client.GetAsync(LoggingServiceUrl).Result;
+            var loggingServiceUrl = GetLoggingServiceUrl();
+            logger.LogInformation("GET: Logging service URL: {0}", loggingServiceUrl);
+
+            var loggingResponse = _client.GetAsync(loggingServiceUrl).Result;
             var messagesResponse = _client.GetAsync(MessagesServiceUrl).Result;
             return loggingResponse.Content.ReadAsStringAsync().Result + ": " + messagesResponse.Content.ReadAsStringAsync().Result;
         }
@@ -28,7 +38,9 @@ namespace FacadeService.Controllers
         {
             logger.LogInformation("Received POST request, value: {0}", value);
 
-            return _client.PostAsync(LoggingServiceUrl, new StringContent(value)).Result;
+            var loggingServiceUrl = GetLoggingServiceUrl();
+            logger.LogInformation("POST: Logging service URL: {0}", loggingServiceUrl);
+            return _client.PostAsync(loggingServiceUrl, new StringContent(value)).Result;
         }
     }
 }
