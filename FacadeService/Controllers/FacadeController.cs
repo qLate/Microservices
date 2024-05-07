@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using LoggingService;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FacadeService.Controllers
 {
@@ -12,24 +13,29 @@ namespace FacadeService.Controllers
             "https://localhost:7004/api/log",
             "https://localhost:7005/api/log"
         };
-        private const string MessagesServiceUrl = "https://localhost:7002/api/messages";
+        private static List<string> messagesServiceUrls = new()
+        {
+            "https://localhost:7006/api/messages",
+            "https://localhost:7007/api/messages"
+        };
 
         private static string GetLoggingServiceUrl() => loggingServiceUrls[Random.Shared.Next(0, loggingServiceUrls.Count)];
+        private static string GetMessagesServiceUrl() => messagesServiceUrls[Random.Shared.Next(0, messagesServiceUrls.Count)];
 
         private HttpClient _client = new();
 
         // GET api/<FacadeController>
         [HttpGet]
-        public string Get()
+        public async Task<string> Get()
         {
             logger.LogInformation("Received GET request");
 
             var loggingServiceUrl = GetLoggingServiceUrl();
-            logger.LogInformation("GET: Logging service URL: {0}", loggingServiceUrl);
+            var loggingResponse = await (await _client.GetAsync(loggingServiceUrl)).Content.ReadAsStringAsync();
 
-            var loggingResponse = _client.GetAsync(loggingServiceUrl).Result;
-            var messagesResponse = _client.GetAsync(MessagesServiceUrl).Result;
-            return loggingResponse.Content.ReadAsStringAsync().Result + ": " + messagesResponse.Content.ReadAsStringAsync().Result;
+            var messagesServiceUrl = GetMessagesServiceUrl();
+            var messagesResponse = await (await _client.GetAsync(messagesServiceUrl)).Content.ReadAsStringAsync();
+            return loggingResponse + ": " + messagesResponse;
         }
 
         // POST api/<FacadeController>
@@ -38,8 +44,9 @@ namespace FacadeService.Controllers
         {
             logger.LogInformation("Received POST request, value: {0}", value);
 
+            HazelcastHandler.messageQueue!.PutAsync(value);
+
             var loggingServiceUrl = GetLoggingServiceUrl();
-            logger.LogInformation("POST: Logging service URL: {0}", loggingServiceUrl);
             return _client.PostAsync(loggingServiceUrl, new StringContent(value)).Result;
         }
     }

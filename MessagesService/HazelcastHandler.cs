@@ -6,15 +6,15 @@ namespace LoggingService
     public static class HazelcastHandler
     {
         public static IHazelcastClient? client;
-        public static IHMap<string, string>? messages;
+        public static IHQueue<string>? messageQueue;
 
-        public static async void Initialize()
+        public static async Task Initialize()
         {
             var options = new HazelcastOptionsBuilder().Build();
             options.ClusterName = "hello-world";
 
             client = await HazelcastClientFactory.StartNewClientAsync(options);
-            messages = await client.GetMapAsync<string, string>("loggerMessages");
+            messageQueue = await client.GetQueueAsync<string>("messagesQueue");
         }
     }
 }
