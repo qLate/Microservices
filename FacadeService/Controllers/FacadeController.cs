@@ -7,20 +7,18 @@ namespace FacadeService.Controllers
     [ApiController]
     public class FacadeController(ILogger<FacadeController> logger) : ControllerBase
     {
-        private static List<string> loggingServiceUrls = new()
-        {
-            "https://localhost:7003/api/log",
-            "https://localhost:7004/api/log",
-            "https://localhost:7005/api/log"
-        };
-        private static List<string> messagesServiceUrls = new()
-        {
-            "https://localhost:7006/api/messages",
-            "https://localhost:7007/api/messages"
-        };
+        //private static List<string> loggingServiceUrls = new()
+        //{
+        //    "https://localhost:7003/api/log",
+        //    "https://localhost:7004/api/log",
+        //    "https://localhost:7005/api/log"
+        //};
+        //private static List<string> messagesServiceUrls = new()
+        //{
+        //    "https://localhost:7006/api/messages",
+        //    "https://localhost:7007/api/messages"
+        //};
 
-        private static string GetLoggingServiceUrl() => loggingServiceUrls[Random.Shared.Next(0, loggingServiceUrls.Count)];
-        private static string GetMessagesServiceUrl() => messagesServiceUrls[Random.Shared.Next(0, messagesServiceUrls.Count)];
 
         private HttpClient _client = new();
 
@@ -30,10 +28,10 @@ namespace FacadeService.Controllers
         {
             logger.LogInformation("Received GET request");
 
-            var loggingServiceUrl = GetLoggingServiceUrl();
+            var loggingServiceUrl = await GetLoggingServiceUrl();
             var loggingResponse = await (await _client.GetAsync(loggingServiceUrl)).Content.ReadAsStringAsync();
 
-            var messagesServiceUrl = GetMessagesServiceUrl();
+            var messagesServiceUrl = await GetMessageServerUrl();
             var messagesResponse = await (await _client.GetAsync(messagesServiceUrl)).Content.ReadAsStringAsync();
             return loggingResponse + ": " + messagesResponse;
         }
@@ -46,8 +44,25 @@ namespace FacadeService.Controllers
 
             HazelcastHandler.messageQueue!.PutAsync(value);
 
-            var loggingServiceUrl = GetLoggingServiceUrl();
+            var loggingServiceUrl = GetLoggingServiceUrl().Result;
             return _client.PostAsync(loggingServiceUrl, new StringContent(value)).Result;
+        }
+
+        private static async Task<string> GetMessageServerUrl()
+        {
+            var messagesResult = await ConsulHostedService.client.Catalog.Service("messagesService");
+            var messagesServiceUrls = messagesResult.Response.Select(s => $"https://{s.ServiceAddress}:{s.ServicePort}/api/messages").ToList();
+            var messagesServiceUrl = messagesServiceUrls[Random.Shared.Next(0, messagesServiceUrls.Count)];
+            return messagesServiceUrl;
+        }
+        private static async Task<string> GetLoggingServiceUrl()
+        {
+            var loggingResult = await ConsulHostedService.client.Catalog.Service("loggingService");
+            var loggingServiceUrls = loggingResult.Response.Select(s => $"https://{s.ServiceAddress}:{s.ServicePort}/api/log").ToList();
+            var loggingServiceUrl = loggingServiceUrls[Random.Shared.Next(0, loggingServiceUrls.Count)];
+            return loggingServiceUrl;
         }
     }
 }
+
+
